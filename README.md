@@ -4,6 +4,7 @@
 
 ## 运行方式
 
+- 在线试玩：https://liyucheng1997.github.io/summit-climb/
 - 直接双击 `index.html` 即可（所有依赖都已本地化，无需联网、无需安装）。
 - 或者在本目录启动任意静态服务器，例如：
 
