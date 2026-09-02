@@ -1,0 +1,8 @@
+# 编辑器 / 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# Claude Code 本地配置
+.claude/

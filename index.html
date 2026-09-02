@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>巅峰攀登 · Summit Climb</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hud-topleft">
+    <div class="bar-row"><span class="bar-label">生命</span><div class="bar"><div id="hpBar" class="bar-fill hp"></div></div><span id="hpVal" class="bar-num">100</span></div>
+    <div class="bar-row"><span class="bar-label">体力</span><div class="bar"><div id="stBar" class="bar-fill st"></div></div><span id="stVal" class="bar-num">100</span></div>
+    <div class="bar-row"><span class="bar-label">体温</span><div class="bar"><div id="wmBar" class="bar-fill wm"></div></div><span id="wmVal" class="bar-num">100</span></div>
+    <div class="status-row"><span id="modeTag" class="mode-tag">行走</span><span id="slopeVal" class="slope">坡度 0°</span><span id="surfVal" class="slope">草地</span></div>
+  </div>
+
+  <div class="hud-topcenter">
+    <div class="alt-box"><div class="alt-label">海拔</div><div class="alt-value"><span id="altVal">0</span><span class="unit">m</span> <span class="alt-max">/ <span id="altMax">0</span>m</span></div></div>
+    <div class="time-box"><span id="timeVal">00:00</span></div>
+    <div id="weatherTag" class="weather-tag">晴朗</div>
+  </div>
+
+  <div class="hud-topright">
+    <div class="wind-box">
+      <div class="compass"><div id="compassArrow" class="compass-arrow">▲</div><div class="compass-label">峰顶 <span id="distVal">0</span>m</div></div>
+      <div class="windbox-inner"><div id="windArrow" class="wind-arrow">➤</div><div class="wind-text">风速 <span id="windVal">0</span> m/s</div></div>
+    </div>
+    <div class="misc-row"><span id="livesBox">生命数 <b id="livesVal">∞</b></span><span>补给 <b id="cratesVal">0</b>/<b id="cratesMax">0</b></span></div>
+  </div>
+
+  <div class="hud-right">
+    <div id="altTrack" class="alt-track"><div id="altMarker" class="alt-marker"></div></div>
+  </div>
+
+  <div class="hud-bottom">
+    <div id="hint" class="hint"></div>
+    <div id="msgLog" class="msg-log"></div>
+  </div>
+
+  <div id="flash" class="flash"></div>
+  <div id="coldOverlay" class="cold-overlay"></div>
+  <div id="bigMsg" class="big-msg hidden"></div>
+</div>
+
+<!-- ============ 主菜单 ============ -->
+<div id="menu" class="overlay">
+  <div class="panel menu-panel">
+    <h1 class="title">巅峰攀登</h1>
+    <div class="subtitle">SUMMIT CLIMB · 真实攀登模拟</div>
+    <p class="intro">程序生成的高山、真实的坡度与体力系统、风雪与落石。选择难度，找到自己的路线，站上顶峰。</p>
+
+    <div class="diff-grid" id="diffGrid"></div>
+
+    <div class="options-row">
+      <label>地形种子 <input id="seedInput" type="number" min="1" max="999999" value="" placeholder="随机"></label>
+      <button id="randSeed" class="btn small">随机</button>
+      <label>画质
+        <select id="qualitySel">
+          <option value="low">低（集显/笔记本）</option>
+          <option value="medium" selected>中</option>
+          <option value="high">高</option>
+        </select>
+      </label>
+      <label><input id="audioToggle" type="checkbox" checked> 环境音效</label>
+      <label><input id="shadowToggle" type="checkbox" checked> 阴影(高画质)</label>
+    </div>
+
+    <button id="startBtn" class="btn primary">开始攀登</button>
+
+    <div class="controls">
+      <div class="ctl"><b>W A S D</b> 移动 / 攀爬</div>
+      <div class="ctl"><b>鼠标拖拽</b> 旋转视角 · <b>滚轮</b> 缩放</div>
+      <div class="ctl"><b>Shift</b> 冲刺（缓坡）</div>
+      <div class="ctl"><b>空格</b> 跳跃 / 攀爬时向上猛冲 / 滑坠时制动</div>
+      <div class="ctl"><b>Tab</b>（按住）俯瞰全局，规划路线</div>
+      <div class="ctl"><b>R</b> 回到上一营地 · <b>Esc</b> 暂停 · <b>M</b> 静音</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 加载 ============ -->
+<div id="loading" class="overlay hidden">
+  <div class="panel">
+    <h2>正在生成山体…</h2>
+    <div class="load-bar"><div id="loadFill"></div></div>
+    <div id="loadText" class="load-text">计算高度场</div>
+  </div>
+</div>
+
+<!-- ============ 暂停 ============ -->
+<div id="pause" class="overlay hidden">
+  <div class="panel">
+    <h2>已暂停</h2>
+    <div class="pause-help">
+      <p><b>坡度 ≤ 42°</b>：可以行走，体力恢复。</p>
+      <p><b>42° ~ 75°</b>：自动进入攀爬，消耗体力；越陡、雪面、逆风消耗越多。静止在 64° 以下可以稍作休息。</p>
+      <p><b>体力耗尽</b>会脱手滑坠，按住<b>空格</b>制动（雪面易停，冰面几乎停不住）。</p>
+      <p><b>高海拔</b>会流失体温，在<b>营地</b>可以恢复并保存进度；<b>补给箱</b>恢复体力与体温。</p>
+      <p><b>暴风雪</b>来临时视野极差、风更大、更冷，尽快找营地或缓坡躲避；<b>落石</b>会从上方陡壁滚下。</p>
+    </div>
+    <div class="btn-row">
+      <button id="resumeBtn" class="btn primary">继续</button>
+      <button id="restartBtn" class="btn">重新开始</button>
+      <button id="menuBtn" class="btn">返回菜单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 结果 ============ -->
+<div id="result" class="overlay hidden">
+  <div class="panel">
+    <h2 id="resultTitle">登顶成功！</h2>
+    <div id="resultRank" class="rank">S</div>
+    <div id="resultStats" class="result-stats"></div>
+    <div class="btn-row">
+      <button id="againBtn" class="btn primary">再来一次</button>
+      <button id="menuBtn2" class="btn">返回菜单</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/lib/three.min.js"></script>
+<script src="js/noise.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/climber.js"></script>
+<script src="js/player.js"></script>
+<script src="js/world.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
