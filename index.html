@@ -3,133 +3,264 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>巅峰攀登 · Summit Climb</title>
+<title>巅峰攀登 · Summit</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="fade" class="fade"></div>
 
-<!-- ============ HUD ============ -->
+<!-- ================= HUD ================= -->
 <div id="hud" class="hidden">
-  <div class="hud-topleft">
-    <div class="bar-row"><span class="bar-label">生命</span><div class="bar"><div id="hpBar" class="bar-fill hp"></div></div><span id="hpVal" class="bar-num">100</span></div>
-    <div class="bar-row"><span class="bar-label">体力</span><div class="bar"><div id="stBar" class="bar-fill st"></div></div><span id="stVal" class="bar-num">100</span></div>
-    <div class="bar-row"><span class="bar-label">体温</span><div class="bar"><div id="wmBar" class="bar-fill wm"></div></div><span id="wmVal" class="bar-num">100</span></div>
-    <div class="status-row"><span id="modeTag" class="mode-tag">行走</span><span id="slopeVal" class="slope">坡度 0°</span><span id="surfVal" class="slope">草地</span></div>
+  <div class="hud-tl">
+    <div class="stage-badge"><span id="hudChapter">第一章</span><b id="hudStage">青岚山</b></div>
+    <div class="clock-row"><span id="clockIcon" class="clock-icon">☀</span><span id="clockVal">14:30</span><span class="sep">·</span><span id="dayVal">第 1 天</span></div>
+    <div class="env-row"><span id="tempVal">12°C</span><span class="sep">·</span><span id="weatherVal">晴朗</span><span class="sep">·</span><span id="windVal">风 2 m/s</span></div>
   </div>
 
-  <div class="hud-topcenter">
-    <div class="alt-box"><div class="alt-label">海拔</div><div class="alt-value"><span id="altVal">0</span><span class="unit">m</span> <span class="alt-max">/ <span id="altMax">0</span>m</span></div></div>
-    <div class="time-box"><span id="timeVal">00:00</span></div>
-    <div id="weatherTag" class="weather-tag">晴朗</div>
+  <div class="hud-tc">
+    <div class="compass" id="compass"><div class="compass-strip" id="compassStrip"></div><div class="compass-needle"></div></div>
+    <div class="alt-readout"><span id="altVal">0</span><small>m</small><em id="altHint"></em></div>
   </div>
 
-  <div class="hud-topright">
-    <div class="wind-box">
-      <div class="compass"><div id="compassArrow" class="compass-arrow">▲</div><div class="compass-label">峰顶 <span id="distVal">0</span>m</div></div>
-      <div class="windbox-inner"><div id="windArrow" class="wind-arrow">➤</div><div class="wind-text">风速 <span id="windVal">0</span> m/s</div></div>
+  <div class="hud-tr">
+    <div class="objectives" id="objectives"></div>
+    <div class="lives" id="livesBox"></div>
+  </div>
+
+  <div class="hud-right"><div id="altTrack" class="alt-track"><div id="altMarker" class="alt-marker"></div></div></div>
+
+  <div class="hud-bl">
+    <div id="tipBox" class="tip-box hidden"></div>
+    <div class="buffs" id="buffs"></div>
+    <div class="stam-wrap">
+      <div class="stam-label"><span id="modeTag" class="mode-tag">行走</span><span id="slopeVal" class="slope"></span></div>
+      <div class="stam-bar" id="stamBar"><div id="stamFill" class="stam-fill"></div><div id="stamGhost" class="stam-ghost"></div><div id="affSegs" class="aff-segs"></div></div>
+      <div class="aff-list" id="affList"></div>
     </div>
-    <div class="misc-row"><span id="livesBox">生命数 <b id="livesVal">∞</b></span><span>补给 <b id="cratesVal">0</b>/<b id="cratesMax">0</b></span></div>
   </div>
 
-  <div class="hud-right">
-    <div id="altTrack" class="alt-track"><div id="altMarker" class="alt-marker"></div></div>
+  <div class="hud-bc">
+    <div id="prompt" class="prompt hidden"></div>
+    <div id="hint" class="hint hidden"></div>
   </div>
+  <div class="hud-br"><div class="hotbar" id="hotbar"></div></div>
 
-  <div class="hud-bottom">
-    <div id="hint" class="hint"></div>
-    <div id="msgLog" class="msg-log"></div>
-  </div>
-
-  <div id="flash" class="flash"></div>
-  <div id="coldOverlay" class="cold-overlay"></div>
-  <div id="bigMsg" class="big-msg hidden"></div>
+  <div id="dynoMeter" class="dyno hidden"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="dyno-bg"/><path id="dynoZone" class="dyno-zone"/><circle cx="50" cy="50" r="42" id="dynoArc" class="dyno-arc"/></svg><span>蓄力</span></div>
+  <div id="msgFeed" class="msg-feed"></div>
+  <div id="bigMsg" class="big-msg hidden"><div class="big-sub" id="bigSub"></div><div class="big-main" id="bigMain"></div></div>
+  <div id="toasts" class="toasts"></div>
+  <div id="lowFx" class="lowfx"><div id="coldFx" class="cold-fx"></div><div id="hurtFx" class="hurt-fx"></div></div>
 </div>
 
-<!-- ============ 主菜单 ============ -->
-<div id="menu" class="overlay">
-  <div class="panel menu-panel">
-    <h1 class="title">巅峰攀登</h1>
-    <div class="subtitle">SUMMIT CLIMB · 真实攀登模拟</div>
-    <p class="intro">程序生成的高山、真实的坡度与体力系统、风雪与落石。选择难度，找到自己的路线，站上顶峰。</p>
-
-    <div class="diff-grid" id="diffGrid"></div>
-
-    <div class="options-row">
-      <label>地形种子 <input id="seedInput" type="number" min="1" max="999999" value="" placeholder="随机"></label>
-      <button id="randSeed" class="btn small">随机</button>
-      <label>画质
-        <select id="qualitySel">
-          <option value="low">低（集显/笔记本）</option>
-          <option value="medium" selected>中</option>
-          <option value="high">高</option>
-        </select>
-      </label>
-      <label><input id="audioToggle" type="checkbox" checked> 环境音效</label>
-      <label><input id="shadowToggle" type="checkbox" checked> 阴影(高画质)</label>
+<!-- ================= 主菜单 ================= -->
+<div id="menu" class="screen">
+  <div class="menu-left">
+    <div class="logo">
+      <div class="logo-mark"><svg viewBox="0 0 120 70"><path d="M5 65 L42 18 L55 34 L72 8 L115 65 Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M62 22 L72 8 L82 22 L76 20 L72 25 L67 20 Z" fill="currentColor"/></svg></div>
+      <h1>巅峰攀登</h1>
+      <div class="logo-en">SUMMIT · 攀登 · 露营 · 攀岩</div>
     </div>
-
-    <button id="startBtn" class="btn primary">开始攀登</button>
-
-    <div class="controls">
-      <div class="ctl"><b>W A S D</b> 移动 / 攀爬</div>
-      <div class="ctl"><b>鼠标拖拽</b> 旋转视角 · <b>滚轮</b> 缩放</div>
-      <div class="ctl"><b>Shift</b> 冲刺（缓坡）</div>
-      <div class="ctl"><b>空格</b> 跳跃 / 攀爬时向上猛冲 / 滑坠时制动</div>
-      <div class="ctl"><b>Tab</b>（按住）俯瞰全局，规划路线</div>
-      <div class="ctl"><b>R</b> 回到上一营地 · <b>Esc</b> 暂停 · <b>M</b> 静音</div>
-    </div>
+    <nav class="menu-buttons">
+      <button class="mbtn" id="btnContinue">继续远征<small id="continueInfo"></small></button>
+      <button class="mbtn primary" id="btnCampaign">远征模式</button>
+      <button class="mbtn" id="btnFree">自由攀登</button>
+      <button class="mbtn" id="btnAchievements">成就</button>
+      <button class="mbtn" id="btnAlbum">相册与日志</button>
+      <button class="mbtn" id="btnSettings">设置</button>
+      <button class="mbtn" id="btnQuit">退出游戏</button>
+    </nav>
+    <div class="menu-foot">v1.0 · 键盘鼠标 / 手柄 · 所有内容均为程序生成</div>
   </div>
 </div>
 
-<!-- ============ 加载 ============ -->
-<div id="loading" class="overlay hidden">
+<!-- ================= 章节选择 ================= -->
+<div id="stageSelect" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2 id="ssTitle">远征模式</h2><button class="xbtn" data-back>✕</button></div>
+    <div id="stageCards" class="stage-cards"></div>
+    <div id="freeOpts" class="free-opts hidden">
+      <label>山体种子 <input id="seedInput" type="number" min="1" max="999999" placeholder="随机"></label>
+      <button class="btn small" id="randSeed">🎲 随机</button>
+      <span class="hint-s">自由攀登会用随机种子生成一座全新的山，风格取决于所选章节模板。</span>
+    </div>
+    <div class="opt-row">
+      <div class="opt-group"><div class="opt-label">难度</div><div id="diffBtns" class="seg"></div></div>
+      <div class="opt-group"><div class="opt-label">冲锋衣颜色</div><div id="jacketBtns" class="swatches"></div></div>
+    </div>
+    <div id="diffDesc" class="diff-desc"></div>
+    <div class="btn-row"><button class="btn primary big" id="btnStart">出发</button></div>
+  </div>
+</div>
+
+<!-- ================= 设置 ================= -->
+<div id="settings" class="screen hidden">
   <div class="panel">
-    <h2>正在生成山体…</h2>
+    <div class="panel-head"><h2>设置</h2><button class="xbtn" data-back>✕</button></div>
+    <div class="settings-grid">
+      <div class="set-sec">画面</div>
+      <label>画质<select id="setQuality"><option value="low">低（集显/笔记本）</option><option value="medium">中</option><option value="high">高</option><option value="ultra">极致</option></select></label>
+      <label>阴影<input type="checkbox" id="setShadows"></label>
+      <label>视野 FOV <input type="range" id="setFov" min="50" max="90" step="1"><span id="fovVal"></span></label>
+      <label>全屏<input type="checkbox" id="setFullscreen"></label>
+      <div class="set-sec">声音</div>
+      <label>主音量<input type="range" id="setMaster" min="0" max="1" step="0.05"></label>
+      <label>音乐<input type="range" id="setMusic" min="0" max="1" step="0.05"></label>
+      <label>音效<input type="range" id="setSfx" min="0" max="1" step="0.05"></label>
+      <div class="set-sec">操控</div>
+      <label>鼠标灵敏度<input type="range" id="setSens" min="0.3" max="2.5" step="0.05"><span id="sensVal"></span></label>
+      <label>反转 Y 轴<input type="checkbox" id="setInvert"></label>
+      <label>新手提示<input type="checkbox" id="setTips"></label>
+    </div>
+    <div class="keys">
+      <div><b>WASD</b>移动 / 攀岩方向</div><div><b>鼠标</b>视角 · <b>滚轮</b>缩放</div>
+      <div><b>Shift</b>奔跑</div><div><b>空格</b>跳跃 / 制动 / 蓄力跳跃抓点</div>
+      <div><b>E</b>互动 / 抓住岩壁 / 松手</div><div><b>Q</b>打岩钉</div>
+      <div><b>T</b>搭帐篷</div><div><b>1-5</b>使用物品</div>
+      <div><b>L</b>头灯</div><div><b>F</b>拍照模式</div>
+      <div><b>M</b>地图</div><div><b>R</b>回到营地</div>
+      <div><b>Esc</b>暂停</div><div><b>Tab</b>俯瞰</div>
+    </div>
+    <div class="btn-row"><button class="btn danger small" id="btnResetSave">清除存档</button><button class="btn primary" data-back>完成</button></div>
+  </div>
+</div>
+
+<!-- ================= 成就 ================= -->
+<div id="achScreen" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2>成就 <small id="achCount"></small></h2><button class="xbtn" data-back>✕</button></div>
+    <div id="achGrid" class="ach-grid"></div>
+  </div>
+</div>
+
+<!-- ================= 相册 ================= -->
+<div id="albumScreen" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2>相册与日志</h2><button class="xbtn" data-back>✕</button></div>
+    <div class="tabs"><button class="tab active" data-tab="photos">照片</button><button class="tab" data-tab="journal">父亲的日志 <small id="jCount"></small></button></div>
+    <div id="albumPhotos" class="photo-grid"></div>
+    <div id="albumJournal" class="journal-list hidden"></div>
+  </div>
+</div>
+
+<!-- ================= 加载 ================= -->
+<div id="loading" class="screen hidden">
+  <div class="loading-box">
+    <div class="load-chapter" id="loadChapter"></div>
+    <div class="load-title" id="loadTitle"></div>
     <div class="load-bar"><div id="loadFill"></div></div>
-    <div id="loadText" class="load-text">计算高度场</div>
+    <div id="loadText" class="load-text"></div>
+    <div id="loadTip" class="load-tip"></div>
   </div>
 </div>
 
-<!-- ============ 暂停 ============ -->
-<div id="pause" class="overlay hidden">
+<!-- ================= 剧情 ================= -->
+<div id="story" class="screen hidden"><div class="story-box"><div id="storyText" class="story-text"></div><div class="story-skip">点击 / 空格 继续</div></div></div>
+
+<!-- ================= 暂停 ================= -->
+<div id="pause" class="screen hidden">
   <div class="panel">
-    <h2>已暂停</h2>
-    <div class="pause-help">
-      <p><b>坡度 ≤ 42°</b>：可以行走，体力恢复。</p>
-      <p><b>42° ~ 75°</b>：自动进入攀爬，消耗体力；越陡、雪面、逆风消耗越多。静止在 64° 以下可以稍作休息。</p>
-      <p><b>体力耗尽</b>会脱手滑坠，按住<b>空格</b>制动（雪面易停，冰面几乎停不住）。</p>
-      <p><b>高海拔</b>会流失体温，在<b>营地</b>可以恢复并保存进度；<b>补给箱</b>恢复体力与体温。</p>
-      <p><b>暴风雪</b>来临时视野极差、风更大、更冷，尽快找营地或缓坡躲避；<b>落石</b>会从上方陡壁滚下。</p>
-    </div>
-    <div class="btn-row">
-      <button id="resumeBtn" class="btn primary">继续</button>
-      <button id="restartBtn" class="btn">重新开始</button>
-      <button id="menuBtn" class="btn">返回菜单</button>
+    <div class="panel-head"><h2>暂停</h2></div>
+    <div id="pauseStats" class="pause-stats"></div>
+    <div class="btn-col">
+      <button class="btn primary" id="btnResume">继续</button>
+      <button class="btn" id="btnPauseMap">地图</button>
+      <button class="btn" id="btnPauseSettings">设置</button>
+      <button class="btn" id="btnPauseHelp">玩法说明</button>
+      <button class="btn" id="btnRestart">重新开始本章</button>
+      <button class="btn" id="btnToMenu">保存并返回主菜单</button>
     </div>
   </div>
 </div>
 
-<!-- ============ 结果 ============ -->
-<div id="result" class="overlay hidden">
+<div id="help" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2>玩法说明</h2><button class="xbtn" data-back>✕</button></div>
+    <div class="help-grid">
+      <div><h3>⛰ 爬山</h3><p>沿着红白路标的<b>之字形步道</b>走最省力。坡度超过 42° 会自动手脚并用攀爬，持续消耗体力；太陡或体力耗尽会<b>滑坠</b>——按住<b>空格</b>用冰镐制动。</p></div>
+      <div><h3>🧗 攀岩</h3><p>岩壁是危险但迅速的捷径。靠近岩壁按 <b>E</b> 抓住岩点，用 <b>WASD</b> 向该方向的岩点移动。白色镁粉标记的是大把手，可以在上面休息；<b>褐红色</b>的松动岩块会碎。按 <b>Q</b> 打岩钉，坠落时绳索会拉住你；够不着时<b>按住空格蓄力</b>，在绿色区域松开跳跃抓点。</p></div>
+      <div><h3>⛺ 露营</h3><p>营地可以<b>生火、烹饪、续热茶、睡觉</b>并自动存档。按 <b>T</b> 可以在任何平地搭起自己的帐篷。夜晚寒冷刺骨，也是看星星（和极光）的好时候。</p></div>
+      <div><h3>❤ 体力与状态</h3><p>体力条会被<b>饥饿、寒冷、伤势、疲惫、缺氧</b>从右侧压缩。吃东西、喝热茶、包扎、睡觉、吸氧可以恢复。负面状态占满整条时你会倒下。</p></div>
+      <div><h3>📖 收集</h3><p>寻找父亲留下的<b>日志</b>（发光的红色笔记本）、<b>补给包</b>（光柱）、<b>柴火</b>，在<b>观景点</b>按 F 拍照。每章有三颗星：登顶、全部日志与观景点、标准用时内无死亡登顶。</p></div>
+      <div><h3>🌨 天气</h3><p>高处风更大、更冷。暴风雪来临前会有预警：视野极差、寒冷加倍——跟着路标走，或者搭帐篷等它过去。</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 营地菜单 ================= -->
+<div id="campMenu" class="side-panel hidden">
+  <div class="camp-head"><div class="camp-title" id="campTitle">营地</div><div class="camp-sub" id="campSub"></div></div>
+  <div class="camp-actions" id="campActions"></div>
+  <div class="camp-foot"><span id="campStatus"></span><button class="btn small" id="btnLeaveCamp">离开营地 (E)</button></div>
+</div>
+
+<!-- ================= 日志 ================= -->
+<div id="journalView" class="screen hidden">
+  <div class="paper">
+    <div class="paper-title" id="jTitle"></div>
+    <div class="paper-text" id="jText"></div>
+    <div class="paper-foot">— 林远的登山日志 · <span id="jNum"></span> —</div>
+    <button class="btn small" id="btnCloseJournal">收好日志 (E)</button>
+  </div>
+</div>
+
+<!-- ================= 地图 ================= -->
+<div id="mapView" class="screen hidden">
+  <div class="map-wrap">
+    <canvas id="mapCanvas" width="900" height="900"></canvas>
+    <div class="map-legend">
+      <div class="map-title" id="mapTitle"></div>
+      <div><i class="lg trail"></i>步道</div><div><i class="lg camp"></i>营地</div><div><i class="lg wall"></i>岩壁</div>
+      <div><i class="lg journal"></i>日志</div><div><i class="lg stash"></i>补给包</div><div><i class="lg view"></i>观景点</div>
+      <div><i class="lg wood"></i>柴火</div><div><i class="lg crev"></i>冰裂缝</div><div><i class="lg you"></i>你的位置</div>
+      <div class="map-close">按 M / Esc 关闭</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 拍照模式 ================= -->
+<div id="photoUI" class="hidden">
+  <div class="photo-frame"></div>
+  <div class="photo-top"><span id="photoTarget"></span></div>
+  <div class="photo-bar">
+    <span><b>鼠标</b>取景</span><span><b>滚轮</b>变焦</span><span><b>1-4</b>滤镜：<em id="photoFilter">原色</em></span><span><b>H</b>隐藏角色</span><span><b>左键 / 回车</b>拍照</span><span><b>F / Esc</b>退出</span>
+  </div>
+  <div id="shutterFlash" class="shutter"></div>
+  <div id="polaroid" class="polaroid hidden"><img id="polaroidImg"><div id="polaroidCap"></div></div>
+</div>
+
+<!-- ================= 结算 ================= -->
+<div id="result" class="screen hidden">
   <div class="panel">
-    <h2 id="resultTitle">登顶成功！</h2>
-    <div id="resultRank" class="rank">S</div>
-    <div id="resultStats" class="result-stats"></div>
+    <div class="res-chapter" id="resChapter"></div>
+    <h2 id="resTitle"></h2>
+    <div class="res-stars" id="resStars"></div>
+    <div id="resStats" class="res-stats"></div>
     <div class="btn-row">
-      <button id="againBtn" class="btn primary">再来一次</button>
-      <button id="menuBtn2" class="btn">返回菜单</button>
+      <button class="btn primary" id="btnNext">下一章</button>
+      <button class="btn" id="btnAgain">再来一次</button>
+      <button class="btn" id="btnResMenu">主菜单</button>
     </div>
   </div>
 </div>
 
 <script src="js/lib/three.min.js"></script>
 <script src="js/noise.js"></script>
+<script src="js/util.js"></script>
+<script src="js/data.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/post.js"></script>
+<script src="js/sky.js"></script>
 <script src="js/terrain.js"></script>
+<script src="js/walls.js"></script>
+<script src="js/models.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/world.js"></script>
 <script src="js/climber.js"></script>
 <script src="js/player.js"></script>
-<script src="js/world.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/save.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

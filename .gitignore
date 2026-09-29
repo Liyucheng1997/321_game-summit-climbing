@@ -4,5 +4,10 @@ Thumbs.db
 desktop.ini
 *.log
 
+# Node / 打包产物
+node_modules/
+dist/
+package-lock.json
+
 # Claude Code 本地配置
 .claude/

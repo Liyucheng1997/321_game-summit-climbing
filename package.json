@@ -1,0 +1,31 @@
+{
+  "name": "summit-climb",
+  "productName": "巅峰攀登 Summit",
+  "version": "1.0.0",
+  "description": "程序生成的 3D 登山、攀岩与露营冒险游戏",
+  "main": "electron/main.js",
+  "scripts": {
+    "serve": "python3 -m http.server 8765",
+    "start": "electron .",
+    "start:windowed": "electron . --windowed",
+    "dist": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux --x64",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "optionalDependencies": {
+    "steamworks.js": "^0.4.0"
+  },
+  "build": {
+    "appId": "com.summitclimb.game",
+    "productName": "Summit",
+    "files": ["index.html", "css/**", "js/**", "electron/**", "steam_appid.txt"],
+    "directories": { "output": "dist" },
+    "win": { "target": "dir" },
+    "linux": { "target": "dir" },
+    "mac": { "target": "dir" }
+  }
+}
