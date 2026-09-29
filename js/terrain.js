@@ -110,7 +110,7 @@ class Terrain {
     let best = -1e9, bi = 0, bj = 0;
     for (let j = 4; j < n - 4; j++) for (let i = 4; i < n - 4; i++) { const h = H[j * n + i]; if (h > best) { best = h; bi = i; bj = j; } }
     const [x, z] = this.gridToWorld(bi, bj);
-    this.flattenDisc(x, z, best, 4, 9);
+    this.flattenDisc(x, z, best, 4.5, 13);
     this.summit.set(x, this.getHeight(x, z), z);
   }
 

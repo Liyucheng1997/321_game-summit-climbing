@@ -238,9 +238,9 @@ class SkySystem {
     if (sunUp > 0.5) { col.copy(this.sunCol); I = sunI * sw; }
     else { col.setRGB(0.55, 0.66, 1.0); I = moonI * sw; }
     I *= 1 - storm * 0.8;
-    const hemiSky = new THREE.Color().copy(this.zen).lerp(this.hor, 0.4).multiplyScalar(1.6);
+    const hemiSky = new THREE.Color().copy(this.zen).lerp(this.hor, 0.5).multiplyScalar(1.5).lerp(new THREE.Color(0.78, 0.8, 0.84), 0.45 * (1 - this.night));
     hemiSky.lerp(new THREE.Color(0.18, 0.22, 0.35), this.night * 0.7);
-    const hemiI = lerp(1.1, 0.5, this.night) * (1 + storm * 0.3);
+    const hemiI = lerp(1.35, 0.55, this.night) * (1 + storm * 0.3);
     return { dir, col, I, hemiSky, hemiI, night: this.night };
   }
 }

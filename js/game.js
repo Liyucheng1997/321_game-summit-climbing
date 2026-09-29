@@ -145,7 +145,8 @@ class Game {
       if (e.code === 'Escape') this.onEscape();
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'Space') this.input.jumpReleased = true; });
-    window.addEventListener('blur', () => { this.keys = {}; });
+    window.addEventListener('blur', () => { this.keys = {}; if (this.state === 'play' && !this.overlay) this.pause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'play' && !this.overlay) this.pause(); });
     cv.addEventListener('mousedown', (e) => {
       this.audio.init(); this.audio.resume();
       if (this.state !== 'play' && this.state !== 'summit') return;

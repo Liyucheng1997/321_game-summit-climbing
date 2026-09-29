@@ -118,13 +118,13 @@ const Tex = {
     const dirt = this.makeData(size, (u, v, c) => {
       const b = N.fbm(u, v, 5, 4);
       const [f1, f2, id] = N2.worley(u, v, 40);
-      const stone = smoothstep(0.4, 0.25, f1) * 0.8;
+      const stone = smoothstep(0.4, 0.25, f1) * 0.5;
       const edge = smoothstep(0.02, 0.1, f2 - f1);
       const fine = N2.noise(u * 160, v * 160, 160, 160);
-      const sv = 0.4 + (id / 255) * 0.18;
-      let r = 0.43 + b * 0.1 + fine * 0.05, g = 0.35 + b * 0.08 + fine * 0.04, bb = 0.26 + b * 0.06 + fine * 0.03;
+      const sv = 0.4 + (id / 255) * 0.1;
+      let r = 0.43 + b * 0.1 + fine * 0.03, g = 0.36 + b * 0.08 + fine * 0.025, bb = 0.27 + b * 0.06 + fine * 0.02;
       r = lerp(r, sv * 1.02, stone); g = lerp(g, sv * 0.97, stone); bb = lerp(bb, sv * 0.9, stone);
-      const shade = lerp(1, 0.75, (1 - edge) * stone);
+      const shade = lerp(1, 0.88, (1 - edge) * stone);
       c[0] = r * shade; c[1] = g * shade; c[2] = bb * shade; c[3] = clamp(0.35 + stone * 0.55 * edge + fine * 0.1, 0, 1);
     });
     const out = {

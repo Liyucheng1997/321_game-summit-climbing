@@ -343,6 +343,7 @@ class World {
     this.flowers.count = 0; this.flowers.frustumCulled = false;
     this.scene.add(this.flowers);
     this.grassCenter = new THREE.Vector2(1e9, 1e9);
+    this.grassScale = this.stage.terrain.palette === 'alpine' ? 0.55 : 1;
   }
 
   updateGrass(px, pz) {
@@ -366,11 +367,12 @@ class World {
       if (d > R) continue;
       const gr = T.grassiness(x, z);
       if (gr < 0.35 || r3 > gr * 1.1) continue;
+      if (this.grassScale < 1 && r1 > 0.5) continue;
       if (T.trailMaskAt(x, z) > 0.3) continue;
       const y = T.getHeight(x, z);
       if (y < T.waterY + 0.3) continue;
       const fade = smoothstep(R, R * 0.7, d);
-      const sc = (0.7 + r3 * 0.7) * fade * (0.6 + gr * 0.5);
+      const sc = (0.7 + r3 * 0.7) * fade * (0.6 + gr * 0.5) * this.grassScale;
       p.set(x, y - 0.03, z); q.setFromAxisAngle(up, r1 * 6.28); s.set(sc, sc * (0.8 + r2 * 0.6), sc);
       m4.compose(p, q, s);
       if (flowersOn && r2 > 0.9 && fn < fmax) {
