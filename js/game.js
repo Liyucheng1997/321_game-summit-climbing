@@ -224,7 +224,7 @@ class Game {
     const Q = this.quality;
     const setP = progress || (() => { });
     const tick = () => new Promise(r => setTimeout(r, 0));
-    const res = forMenu ? Math.min(Q.res, 360) : Q.res;
+    const res = TERRAIN_RES; // 所有画质使用相同的地形分辨率，保证关卡布局一致
     const T = new Terrain(stage, seed, res);
     setP(0.02, '计算高度场'); await tick();
     T.beginGenerate();
@@ -646,18 +646,26 @@ class Game {
     const P = this.player, T = this.terrain;
     if (P.mode !== 'walk' || this.overlay) return;
     if (P.inv.tent <= 0) { this.ui.msg('你没有帐篷', 'warn'); return; }
-    const fx = P.facing.x, fz = P.facing.z;
-    const cx = P.pos.x + fx * 2.5, cz = P.pos.z + fz * 2.5;
-    let maxS = 0;
-    for (const [ox, oz] of [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]]) maxS = Math.max(maxS, T.getSlopeDeg(cx + ox, cz + oz));
-    if (maxS > 16) { this.ui.msg('这里太陡了，找块平地再搭帐篷', 'warn'); return; }
-    if (T.camps.some(c => !c.custom && Math.hypot(c.pos.x - cx, c.pos.z - cz) < 25)) { this.ui.msg('附近已经有营地了', 'info'); return; }
-    if (T.inCrevasse(cx, cz, 4) || T.nearWallFace(cx, cz) || T.getHeight(cx, cz) < T.waterY + 0.5) { this.ui.msg('这里不适合扎营', 'warn'); return; }
+    const base = Math.atan2(P.facing.x, P.facing.z);
+    let cx = 0, cz = 0, fx = 0, fz = 0, reason = 'steep';
+    for (const off of [0, 0.8, -0.8, 1.6, -1.6, 2.4, -2.4, Math.PI]) {
+      const a = base + off;
+      fx = Math.sin(a); fz = Math.cos(a);
+      const x = P.pos.x + fx * 2.8, z = P.pos.z + fz * 2.8;
+      let maxS = 0;
+      for (const [ox, oz] of [[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]]) maxS = Math.max(maxS, T.getSlopeDeg(x + ox, z + oz));
+      if (maxS > 26) continue;
+      if (T.camps.some(c => !c.custom && Math.hypot(c.pos.x - x, c.pos.z - z) < 25)) { reason = 'camp'; continue; }
+      if (T.inCrevasse(x, z, 4) || T.nearWallFace(x, z) || T.getHeight(x, z) < T.waterY + 0.5 || T.trailMaskAt(x, z) > 0.5) { reason = 'bad'; continue; }
+      cx = x; cz = z; reason = null; break;
+    }
+    if (reason) { this.ui.msg(reason === 'camp' ? '附近已经有营地了' : reason === 'bad' ? '这里不适合扎营（离开步道、冰裂缝和岩壁）' : '这里太陡了，找块平缓些的地方再搭帐篷', 'warn'); return; }
     P.mode = 'kneel'; this.audio.tent();
     this.ui.msg('正在搭帐篷……', 'info');
     setTimeout(() => {
       if (!this.player || this.player !== P) return;
       const camp = this.world.pitchTent(new THREE.Vector3(cx, 0, cz), Math.atan2(fx, fz));
+      P.pos.y = T.groundHeight(P.pos.x, P.pos.z);
       P.mode = 'walk';
       this.respawnCamp = camp; this.respawnPoint.copy(camp.pos).add(new THREE.Vector3(1.5, 0, 1.5));
       this.ui.big('我的营地', '帐篷已搭好');

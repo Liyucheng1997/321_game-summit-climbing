@@ -1,10 +1,11 @@
 /* 游戏数据：章节、难度、物品、成就、日志文本 */
 
+const TERRAIN_RES = 440;
 const QUALITY = {
-  low: { label: '低', res: 320, shadow: 0, pixelRatio: 1.0, post: false, grass: 0, trees: 1400, rocks: 300, snow: 1500, tex: 256 },
-  medium: { label: '中', res: 440, shadow: 2048, pixelRatio: 1.0, post: true, grass: 9000, trees: 2600, rocks: 520, snow: 3000, tex: 512 },
-  high: { label: '高', res: 520, shadow: 2048, pixelRatio: 1.25, post: true, grass: 16000, trees: 3600, rocks: 700, snow: 4500, tex: 512 },
-  ultra: { label: '极致', res: 600, shadow: 4096, pixelRatio: 1.5, post: true, grass: 26000, trees: 4800, rocks: 900, snow: 6000, tex: 512 },
+  low: { label: '低', shadow: 0, pixelRatio: 1.0, post: false, grass: 0, trees: 1400, rocks: 300, snow: 1500, tex: 256 },
+  medium: { label: '中', shadow: 2048, pixelRatio: 1.0, post: true, grass: 9000, trees: 2600, rocks: 520, snow: 3000, tex: 512 },
+  high: { label: '高', shadow: 2048, pixelRatio: 1.25, post: true, grass: 16000, trees: 3600, rocks: 700, snow: 4500, tex: 512 },
+  ultra: { label: '极致', shadow: 4096, pixelRatio: 1.5, post: true, grass: 26000, trees: 4800, rocks: 900, snow: 6000, tex: 512 },
 };
 
 const DIFFICULTIES = {

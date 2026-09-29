@@ -1,11 +1,11 @@
 /* 攀岩墙：岩面网格、岩点生成、局部坐标查询与碰撞 */
 const HOLD = { JUG: 0, CRIMP: 1, SLOPER: 2, LOOSE: 3, ICE: 4 };
 const HOLD_INFO = [
-  { name: '大把手', drain: -3, cost: 1.0, color: 0xd9d2c0, chalk: true },
-  { name: '小岩点', drain: 4.2, cost: 1.35, color: 0xb9b1a2, chalk: true },
-  { name: '斜面点', drain: 6.5, cost: 1.5, color: 0x9e978b, chalk: false },
-  { name: '松动岩块', drain: 3.0, cost: 1.2, color: 0x9a5b3c, chalk: false, crumble: 1.6 },
-  { name: '冰镐点', drain: 3.6, cost: 1.3, color: 0x2e5f86, chalk: false },
+  { name: '大把手', drain: -8, cost: 1.0, color: 0xd9d2c0, chalk: true },
+  { name: '小岩点', drain: 3.0, cost: 1.35, color: 0xb9b1a2, chalk: true },
+  { name: '斜面点', drain: 5.0, cost: 1.5, color: 0x9e978b, chalk: false },
+  { name: '松动岩块', drain: 2.5, cost: 1.2, color: 0x9a5b3c, chalk: false, crumble: 1.6 },
+  { name: '冰镐点', drain: 2.8, cost: 1.3, color: 0x2e5f86, chalk: false },
 ];
 
 class ClimbWall {
@@ -138,11 +138,13 @@ class ClimbWall {
       }
       add(a, H - 0.45, HOLD.JUG);
     }
+    // 底部起步点
+    for (let a = -W / 2 + 0.9; a < W / 2 - 0.7; a += 1.4 + rnd() * 0.6) add(a, 1.0 + rnd() * 0.6, HOLD.JUG);
     // 中段休息点
     const ry = H * rrange(rnd, 0.42, 0.58);
     for (let r = 0; r < routes; r++) { const a = -W / 2 + (W) * (r + 0.5) / routes; add(a + 0.3, ry, HOLD.JUG); }
     // 散布
-    const scatter = Math.floor(W * H * (0.3 - d * 0.06));
+    const scatter = Math.floor(W * H * (0.13 - d * 0.025));
     for (let k = 0; k < scatter; k++) add((rnd() - 0.5) * (W - 1.2), 0.8 + rnd() * (H - 1.2), pickType());
     // 顶部边缘保证可翻越
     for (let a = -W / 2 + 1; a < W / 2 - 0.8; a += 1.6 + rnd()) add(a, H - 0.4, HOLD.JUG);
@@ -188,7 +190,7 @@ class ClimbWall {
         bx.crossVectors(by, h.nrm).normalize();
         m.makeBasis(bx, by, h.nrm);
         q.setFromRotationMatrix(m);
-        const sc = scales[t], j = 0.85 + rnd() * 0.3;
+        const sc = scales[t], j = (0.85 + rnd() * 0.3) * 0.8;
         s.set(sc[0] * j, sc[1] * j, sc[2] * j);
         m.compose(h.pos, q, s);
         im.setMatrixAt(k, m);

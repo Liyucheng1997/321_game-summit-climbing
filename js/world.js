@@ -529,6 +529,8 @@ class World {
     const T = this.T;
     const old = T.camps.find(c => c.custom);
     if (old) { this.scene.remove(old.group); disposeTree(old.group); T.camps.splice(T.camps.indexOf(old), 1); this.fires.splice(this.fires.indexOf(old), 1); }
+    T.levelArea(pos.x, pos.z, 4.5, 7.5);
+    if (this.grassCenter) this.grassCenter.set(1e9, 1e9);
     const camp = { pos: pos.clone(), dir: yaw, index: 0, visited: true, fixed: false, custom: true, fire: 0, name: '我的营地' };
     camp.pos.y = T.getHeight(pos.x, pos.z);
     this.dressCamp(camp, 0, 0xff6b35, false);

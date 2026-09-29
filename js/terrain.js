@@ -129,6 +129,21 @@ class Terrain {
     });
   }
 
+  /* 运行时平整一块地面（搭帐篷），并同步更新网格 */
+  levelArea(cx, cz, r0, r1) {
+    const h = this.getHeight(cx, cz);
+    this.flattenDisc(cx, cz, h, r0, r1);
+    if (!this.mesh) return;
+    const pos = this.mesh.geometry.attributes.position, nor = this.mesh.geometry.attributes.normal, n = this.n, H = this.heights, c = this.cell;
+    this.forVerts(cx - r1 - c * 2, cz - r1 - c * 2, cx + r1 + c * 2, cz + r1 + c * 2, (idx, x, z, i, j) => {
+      pos.setY(idx, H[idx]);
+      const hl = H[j * n + Math.max(0, i - 1)], hr = H[j * n + Math.min(n - 1, i + 1)], hd = H[Math.max(0, j - 1) * n + i], hu = H[Math.min(n - 1, j + 1) * n + i];
+      const nx = hl - hr, ny = 2 * c, nz = hd - hu, l = Math.hypot(nx, ny, nz);
+      nor.setXYZ(idx, nx / l, ny / l, nz / l);
+    });
+    pos.needsUpdate = true; nor.needsUpdate = true;
+  }
+
   /* ---------------- 步道：A* 寻路 + 平滑 + 雕刻 ---------------- */
   computeTrail() {
     const Gc = 125, cs = this.size / Gc, nC = Gc + 1, half = this.size / 2;
@@ -255,12 +270,12 @@ class Terrain {
       const d = best[idx];
       this.trailDist[idx] = d;
       if (d > 8) continue;
-      if (final && this.crevasses.length && this.inCrevasse(-half + (idx % n) * c, -half + Math.floor(idx / n) * c, 1.2)) continue;
-      H[idx] = lerp(H[idx], th[idx], 1 - smoothstep(3.0, 7.5, d));
+      const cd = final && this.crevasses.length ? this.crevDepthAt(-half + (idx % n) * c, -half + Math.floor(idx / n) * c) : 0;
+      H[idx] = lerp(H[idx], th[idx] - cd, 1 - smoothstep(3.0, 7.5, d));
       this.trailMask[idx] = Math.max(this.trailMask[idx], 1 - smoothstep(0.9, 2.0, d));
     }
     for (const p of this.trail) p.y = this.getHeight(p.x, p.z);
-    for (const cv of this.crevasses) { const p = tr[cv.trailIdx]; if (p) p.y = cv.lipY; }
+    if (final) this.finalizeBridges();
     // 空间索引
     this.trailGrid = new Map();
     this.trail.forEach((p, k) => {
@@ -395,6 +410,12 @@ class Terrain {
       const p = tr[i];
       if (p.y < snowY + 8 || p.y > this.summit.y * 0.8) continue;
       if (p.s - lastS < 70 + rnd() * 40) continue;
+      // 只在平直、平缓的路段上设置裂缝与梯子桥
+      if (i < 8 || i > tr.length - 9) continue;
+      const pa = tr[i - 7], pb = tr[i + 7];
+      if (Math.abs(pb.y - pa.y) / 28 > 0.22) continue;
+      const d1 = Math.atan2(p.x - pa.x, p.z - pa.z), d2 = Math.atan2(pb.x - p.x, pb.z - p.z);
+      if (Math.abs(wrapAngle(d2 - d1)) > 0.3) continue;
       let ok = true;
       for (const c of this.camps) if (Math.hypot(c.pos.x - p.x, c.pos.z - p.z) < 35) ok = false;
       for (const w of this.walls) { const l = this.wallLocal(w, p.x, p.z); if (Math.abs(l.a) < w.W / 2 + 25 && l.b > -20 && l.b < w.D + 20) ok = false; }
@@ -409,7 +430,7 @@ class Terrain {
       const y0 = this.getHeight(p.x - tx * bl / 2, p.z - tz * bl / 2), y1 = this.getHeight(p.x + tx * bl / 2, p.z + tz * bl / 2);
       this.carveCrevasse(cv);
       this.crevasses.push(cv);
-      this.bridges.push({ x: p.x, z: p.z, tx, tz, len: bl, y0: y0 + 0.08, y1: y1 + 0.08, halfW: 0.95 });
+      this.bridges.push({ x: p.x, z: p.z, tx, tz, len: bl, y0: y0 + 0.08, y1: y1 + 0.08, halfW: 1.05 });
       lastS = p.s;
     }
   }
@@ -421,15 +442,34 @@ class Terrain {
 
   crevWidthAt(cv, u) { const t = 2 * u / cv.L; return t * t >= 1 ? 0 : cv.w * Math.sqrt(1 - t * t); }
 
+  crevDepthOne(cv, x, z) {
+    const { u, v } = this.crevLocal(cv, x, z);
+    const wd = this.crevWidthAt(cv, u);
+    if (wd <= 0) return 0;
+    const t = Math.abs(v) / (wd / 2 + 0.6);
+    return t >= 1 ? 0 : cv.depth * (1 - t * t) * Math.min(1, wd / 1.2);
+  }
+  crevDepthAt(x, z) { let d = 0; for (const cv of this.crevasses) d = Math.max(d, this.crevDepthOne(cv, x, z)); return d; }
+
   carveCrevasse(cv) {
     const H = this.heights, R = cv.L / 2 + 4;
-    this.forVerts(cv.x - R, cv.z - R, cv.x + R, cv.z + R, (idx, x, z) => {
-      const { u, v } = this.crevLocal(cv, x, z);
-      const wd = this.crevWidthAt(cv, u);
-      if (wd <= 0) return;
-      const t = Math.abs(v) / (wd / 2 + 0.6);
-      if (t >= 1) return;
-      H[idx] -= cv.depth * (1 - t * t) * Math.min(1, wd / 1.2);
+    this.forVerts(cv.x - R, cv.z - R, cv.x + R, cv.z + R, (idx, x, z) => { H[idx] -= this.crevDepthOne(cv, x, z); });
+  }
+
+  /* 最终雕刻步道之后，按实际地形重新确定桥面与裂缝边缘高度 */
+  finalizeBridges() {
+    this.crevasses.forEach((cv, k) => {
+      const b = this.bridges[k];
+      const endH = (sgn) => {
+        for (let o = b.len / 2; o < b.len / 2 + 4; o += 0.5) {
+          const x = b.x + b.tx * o * sgn, z = b.z + b.tz * o * sgn;
+          if (this.crevDepthAt(x, z) < 0.05) return this.getHeight(x, z);
+        }
+        return this.getHeight(b.x + b.tx * b.len / 2 * sgn, b.z + b.tz * b.len / 2 * sgn);
+      };
+      b.y0 = endH(-1) + 0.08; b.y1 = endH(1) + 0.08;
+      cv.lipY = (b.y0 + b.y1) / 2;
+      const p = this.trail[cv.trailIdx]; if (p) p.y = cv.lipY;
     });
   }
 
@@ -579,6 +619,13 @@ class Terrain {
     const i = clamp(Math.round((x + this.size / 2) / this.cell), 0, this.res);
     const j = clamp(Math.round((z + this.size / 2) / this.cell), 0, this.res);
     return this.trailMask[j * this.n + i];
+  }
+
+  trailDistAt(x, z) {
+    if (!this.trailDist) return 99;
+    const i = clamp(Math.round((x + this.size / 2) / this.cell), 0, this.res);
+    const j = clamp(Math.round((z + this.size / 2) / this.cell), 0, this.res);
+    return this.trailDist[j * this.n + i];
   }
 
   /* 植被/草地用：该点是否是草地 */

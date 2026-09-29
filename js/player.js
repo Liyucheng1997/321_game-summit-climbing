@@ -44,7 +44,7 @@ class Player {
   }
 
   get alive() { return this.mode !== 'dead'; }
-  get animMode() { return this.action && this.action.type === 'use' ? 'use' : this.mode; }
+  get animMode() { return this.action && this.action.type === 'use' ? 'use' : this.mode === 'walk' && this.slope > 48 && this.moving ? 'scramble' : this.mode; }
   get affTotal() { const a = this.aff; return a.hunger + a.cold + a.injury + a.fatigue + a.hypoxia; }
   emit(type, data) { this.events.push({ type, data: data || {} }); }
 
@@ -177,22 +177,23 @@ class Player {
   }
 
   /* 步道上有台阶与固定绳，可以走更陡的坡 */
-  walkLimit() { return this.T.trailMaskAt(this.pos.x, this.pos.z) > 0.35 ? 55 : this.walkable; }
+  walkLimit() { return this.onTrail() ? 80 : this.walkable; }
+  onTrail() { return this.T.trailDistAt(this.pos.x, this.pos.z) < 2.8; }
 
   stepWalk(dt, input, md, up, W) {
     const v = this.vel, n = this.normal;
     this.braking = false;
     if (this.moving) {
-      const upDot = md.dot(up), sf = Math.min(1.4, this.slope / this.walkable);
-      if (this.slope > this.walkable) this.stamina -= 2.5 * Math.max(0, upDot) * this.diff.drain * dt; // 陡峭台阶路段
-      let f = 1 - 0.45 * Math.max(0, upDot) * sf + 0.12 * Math.max(0, -upDot) * sf;
+      const upDot = md.dot(up), sf = Math.min(1.5, this.slope / this.walkable);
+      if (this.slope > this.walkable) this.stamina -= (2.5 + (this.slope - this.walkable) * 0.15) * Math.max(0, upDot) * this.diff.drain * dt; // 陡峭台阶/固定绳路段
+      let f = Math.max(0.3, 1 - 0.45 * Math.max(0, upDot) * sf + 0.12 * Math.max(0, -upDot) * sf);
       if (this.mat === MAT.SNOW) f *= 0.82; else if (this.mat === MAT.ICE) f *= 0.7; else if (this.mat === MAT.DIRT && this.T.trailMaskAt(this.pos.x, this.pos.z) > 0.5) f *= 1.08;
       // 顶风更慢
       f *= 1 - clamp(-(W.wind.x * md.x + W.wind.z * md.z) / 40, -0.1, 0.3);
       this.sprinting = input.sprint && this.stamina > 2;
       const spd = 3.3 * (this.sprinting ? 1.7 : 1) * f;
       v.lerp(this._tmp.copy(md).multiplyScalar(spd), Math.min(1, 9 * dt));
-      if (this.sprinting) this.stamina -= 9 * this.diff.drain * dt; else this.stamina += 5 * dt;
+      if (this.sprinting) this.stamina -= 9 * this.diff.drain * dt; else if (this.slope <= this.walkable) this.stamina += 5 * dt;
       this.facing.set(md.x, 0, md.z);
     } else {
       this.sprinting = false;
@@ -291,7 +292,7 @@ class Player {
       if (l.y < 1.2 && l.y > -1.5) {
         const fb = w.faceB(l.a, 1.2);
         if (l.b > fb - 1.7 && l.b <= fb) {
-          const h = w.nearestHold(l.a, l.y + 1.9, 1.4);
+          const h = w.nearestHold(l.a, l.y + 1.8, 2.4, (x) => x.y < l.y + 2.6);
           if (h) return { wall: w, hold: h, from: 'bottom' };
         }
       } else if (l.y > w.H - 1.5 && l.b > 2.5 && l.b < 6.5) {
@@ -303,7 +304,7 @@ class Player {
   }
 
   enterWall(g) {
-    this.wall = g.wall; this.hold = g.hold; this.move = null; this.dyno = null;
+    this.wall = g.wall; this.hold = g.hold; this.move = null; this.dyno = null; this.qInteract = false; this.qPiton = false;
     this.mode = 'wall'; this.vel.set(0, 0, 0); this.hold.hangT = 0;
     this.sessionPitons = [];
     this.wallStartA = g.hold.a;
@@ -388,6 +389,8 @@ class Player {
     const lean = Math.max(0, -w.normalAt(this.hold.a, this.hold.y, this._n).y); // 悬垂程度
     const chalk = this.chalkT > 0 ? 0.5 : 1;
     this.wallHint = '';
+    if (input.interact) this.qInteract = true;
+    if (input.piton) this.qPiton = true;
     if (this.move) {
       const mv = this.move;
       mv.t += dt / mv.dur;
@@ -410,7 +413,8 @@ class Player {
     if (h.type === HOLD.LOOSE && h.hangT > info.crumble) { w.breakHold(h); this.emit('crumble', { pos: h.pos.clone() }); return this.fallFromWall('crumble'); }
     if (this.stamina <= 0) { this.stamina = 0; return this.fallFromWall('stamina'); }
     // 打岩钉
-    if (input.piton && !this.action && !this.dyno) {
+    if (this.qPiton && !this.action && !this.dyno) {
+      this.qPiton = false;
       if (this.inv.piton > 0) {
         this.action = { type: 'piton', t: 0, dur: 0.8, done: () => {
           if (!this.wall) return;
@@ -425,7 +429,8 @@ class Player {
       } else this.emit('noPiton');
     }
     // 松手
-    if (input.interact && !this.action) {
+    if (this.qInteract && !this.action) {
+      this.qInteract = false;
       if (h.y < 2.2) { this.dismountBottom(); return; }
       return this.fallFromWall('letgo');
     }
@@ -462,7 +467,7 @@ class Player {
       const target = w.findHold(h, dA, dY, 1.3);
       if (target) {
         const dist = Math.hypot(target.a - h.a, target.y - h.y);
-        const cost = (2.5 + dist * 3.5) * HOLD_INFO[target.type].cost * (1 + lean) * D.drain * chalk;
+        const cost = (1.2 + dist * 2.0) * HOLD_INFO[target.type].cost * (1 + lean) * D.drain * chalk;
         this.stamina -= cost * (dY < -0.3 ? 0.5 : 1);
         const lead = Math.abs(dA) > 0.3 ? (dA > 0 ? 'R' : 'L') : (this.lastLead === 'L' ? 'R' : 'L');
         this.lastLead = lead;
