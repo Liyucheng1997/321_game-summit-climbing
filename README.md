@@ -7,6 +7,8 @@
 
 ## 运行
 
+- 在线试玩：https://liyucheng1997.github.io/summit-climb/ （需要重新部署本版本后才会更新）
+
 ```bash
 # 任意静态服务器即可
 python3 -m http.server 8765
